@@ -3,6 +3,7 @@ package blockchain
 import (
 	"crypto/sha256"
 	"fmt"
+	"sync"
 )
 
 type Block struct {
@@ -16,6 +17,7 @@ type blockchain struct {
 }
 
 var b *blockchain
+var once sync.Once
 
 func (b *Block) calculateHash() {
 	hash := sha256.Sum256([]byte(b.Data + b.PrevHash))
@@ -42,7 +44,10 @@ func (b *blockchain) AddBlock(data string) {
 
 func GetBlockchain() *blockchain {
 	if b == nil {
-		b = &blockchain{}
+		once.Do(func() {
+			b = &blockchain{}
+			b.blocks = append(b.blocks, createBlock("Genesis Block"))
+		})
 	}
 	return b
 }

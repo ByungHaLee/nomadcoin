@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github/ByungHaLee/nomadcoin/blockchain"
+	"github/ByungHaLee/nomadcoin/utils"
 	"log"
 	"net/http"
 )
@@ -21,7 +23,10 @@ type URLDescription struct {
 	Method      string `json:"method"`
 	Description string `json:"description"`
 	Payload     string `json:"payload,omitempty"`
-	Ignored     string `json:"-"`
+}
+
+type AddBlockBody struct {
+	Message string
 }
 
 func documentation(rw http.ResponseWriter, r *http.Request) {
@@ -36,20 +41,28 @@ func documentation(rw http.ResponseWriter, r *http.Request) {
 			Method:      "POST",
 			Description: "Add A Block",
 			Payload:     "data:string",
-			Ignored:     "secret",
 		},
 	}
 	rw.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(rw).Encode(data)
 }
 
+func blocks(rw http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		rw.Header().Add("Content-Type", "application/json")
+		json.NewEncoder(rw).Encode(blockchain.GetBlockchain().AllBlocks())
+	case "POST":
+		var addBlockBody AddBlockBody
+		utils.HandleErr(json.NewDecoder(r.Body).Decode(&addBlockBody))
+		blockchain.GetBlockchain().AddBlock(addBlockBody.Message)
+		rw.WriteHeader(http.StatusCreated)
+	}
+}
+
 func main() {
-	fmt.Println(URLDescription{
-		URL:         "/",
-		Method:      "GET",
-		Description: "See Documentation",
-	})
 	http.HandleFunc("/", documentation)
+	http.HandleFunc("/blocks", blocks)
 	fmt.Printf("Listening on port http://localhost%s\n", port)
 	log.Fatal(http.ListenAndServe(port, nil))
 }
